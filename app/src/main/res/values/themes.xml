@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.GalleryApp" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Material 3 attributes can be customized here if needed -->
+    </style>
+</resources>

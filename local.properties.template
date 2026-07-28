@@ -1,0 +1,17 @@
+# ============================================================
+# OP Gallery — Release Signing Configuration Template
+# Salin nilai di bawah ke file local.properties milik Anda.
+# JANGAN commit local.properties atau file .jks ke Git!
+# ============================================================
+
+# Path ke file keystore (relatif dari root project atau absolute)
+RELEASE_STORE_FILE=release-key.jks
+
+# Password keystore
+RELEASE_STORE_PASSWORD=PasswordKeystoreAnda
+
+# Alias key di dalam keystore
+RELEASE_KEY_ALIAS=gallery-key-alias
+
+# Password alias key
+RELEASE_KEY_PASSWORD=PasswordAliasAnda
