@@ -51,6 +51,7 @@ fun AppNavigation() {
                 onPermissionGranted = {
                     navController.navigate(Routes.GALLERY_HOME) {
                         popUpTo(Routes.PERMISSION) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
