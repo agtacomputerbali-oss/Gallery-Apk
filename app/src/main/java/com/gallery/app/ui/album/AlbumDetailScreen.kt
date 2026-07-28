@@ -35,6 +35,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.gallery.app.domain.model.PhotoItem
 import com.gallery.app.ui.components.PhotoThumbnail
 
@@ -135,9 +136,7 @@ fun AlbumDetailScreen(
                     ) {
                         items(
                             count = lazyPagingItems.itemCount,
-                            key = { index ->
-                                lazyPagingItems[index]?.id ?: index
-                            }
+                            key = lazyPagingItems.itemKey { it.id }
                         ) { index ->
                             val photo = lazyPagingItems[index]
                             if (photo != null) {
