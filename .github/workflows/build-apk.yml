@@ -4,14 +4,14 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build & Publish Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -39,3 +39,14 @@ jobs:
           name: Gallery-App-Debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+
+      - name: Publish Public GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "app/build/outputs/apk/debug/app-debug.apk"
+          tag: "v1.0.0"
+          name: "Gallery APK v1.0.0 (Debug)"
+          body: "Direct 1-Click Download APK untuk perangkat Android. Tidak perlu Sign-In ke GitHub!"
+          allowUpdates: true
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
