@@ -37,16 +37,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Gallery-App-Debug-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
 
       - name: Publish Public GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "app/build/outputs/apk/debug/app-debug.apk"
-          tag: "v1.0.0"
-          name: "Gallery APK v1.0.0 (Debug)"
-          body: "Direct 1-Click Download APK untuk perangkat Android. Tidak perlu Sign-In ke GitHub!"
+          artifacts: "app/build/outputs/apk/debug/*.apk"
+          tag: "v1.0.1"
+          name: "Gallery APK (Debug Release)"
+          body: "Direct 1-Click Download APK untuk perangkat Android. Berkas APK dikompresi dengan nama versi otomatis."
           allowUpdates: true
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
