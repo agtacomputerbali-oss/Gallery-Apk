@@ -1,6 +1,6 @@
 # Developer Guide — Gallery App Android
 
-> **Versi:** v1.7.0-M7 — 26 Juli 2026
+> **Versi:** v2.0.0-M9 — 28 Juli 2026
 > **Tujuan:** Panduan referensi cepat bagi pengembang dan perkakas otomatis untuk memahami arsitektur, alur data, keamanan Scoped Storage, dan proses kompilasi aplikasi galeri Android ini.
 
 ---
@@ -26,26 +26,33 @@ Gallery-Apk/
 │   ├── src/main/
 │   │   ├── java/com/gallery/app/             ← Berkas kode Kotlin
 │   │   │   ├── data/                         ← Lapisan Data (MediaStore & Vault Storage)
-│   │   │   │   ├── local/                    ← Encrypted DataStore & File Vault Manager (Planned M8)
-│   │   │   │   │   ├── VaultStorageManager.kt
-│   │   │   │   │   └── SecurityPreferences.kt
 │   │   │   │   ├── paging/                   ← Jetpack Paging 3 Source
 │   │   │   │   │   └── MediaPagingSource.kt  [✅ M2]
 │   │   │   │   └── repository/               ← Implementasi Repository
-│   │   │   │       └── MediaRepositoryImpl.kt [✅ M2-M7]
+│   │   │   │       └── MediaRepositoryImpl.kt [✅ M2-M9]
 │   │   │   │
 │   │   │   ├── domain/                       ← Lapisan Domain (Model & Interface)
 │   │   │   │   ├── model/                    ← Data Class
 │   │   │   │   │   ├── PhotoItem.kt          [✅ M2]
 │   │   │   │   │   ├── Album.kt              [✅ M4]
-│   │   │   │   │   └── VaultItem.kt          (Planned M8)
+│   │   │   │   │   └── VaultItem.kt          [✅ M8]
 │   │   │   │   ├── repository/               ← Contracts
-│   │   │   │   │   └── MediaRepository.kt    [✅ M2-M7]
-│   │   │   │   └── usecase/                  ← Logika Bisnis
-│   │   │   │       ├── SaveEditedImageUseCase.kt (Planned M6)
-│   │   │   │       └── MoveToVaultUseCase.kt (Planned M8)
+│   │   │   │   │   └── MediaRepository.kt    [✅ M2-M9]
+│   │   │   │   └── usecase/                  ← Logika Bisnis (9 Use Cases)
+│   │   │   │       ├── DeletePhotosUseCase.kt    [✅ M5]
+│   │   │   │       ├── GetAlbumsUseCase.kt       [✅ M4]
+│   │   │   │       ├── GetPhotosByBucketUseCase.kt [✅ M4]
+│   │   │   │       ├── HidePhotosUseCase.kt      [✅ M8]
+│   │   │   │       ├── PermanentDeleteUseCase.kt [✅ M7]
+│   │   │   │       ├── RestoreFromVaultUseCase.kt [✅ M8]
+│   │   │   │       ├── RestorePhotosUseCase.kt   [✅ M7]
+│   │   │   │       ├── SaveEditedPhotoUseCase.kt [✅ M6]
+│   │   │   │       └── SharePhotosUseCase.kt     [✅ M5]
 │   │   │   │
 │   │   │   ├── ui/                           ← Lapisan Antarmuka Jetpack Compose
+│   │   │   │   ├── main/                     ← Entry Point & Navigasi Utama
+│   │   │   │   │   ├── AppNavigation.kt      [✅ M1-M9]
+│   │   │   │   │   └── MainActivity.kt       [✅ M1]
 │   │   │   │   ├── components/               ← Komponen UI Reusable
 │   │   │   │   │   └── SelectionTopAppBar.kt [✅ M5]
 │   │   │   │   ├── gallery/                  ← Layar Utama Galeri Grid
@@ -65,20 +72,26 @@ Gallery-Apk/
 │   │   │   │   │   └── PermissionState.kt    [✅ M1]
 │   │   │   │   ├── editor/                   ← Layar Crop & Filter Foto
 │   │   │   │   │   ├── ImageEditorScreen.kt  [✅ M6]
-│   │   │   │   │   └── EditorViewModel.kt     [✅ M6]
+│   │   │   │   │   └── EditorViewModel.kt    [✅ M6]
 │   │   │   │   ├── trash/                    ← Layar Sampah Sistem
 │   │   │   │   │   ├── TrashScreen.kt        [✅ M7]
 │   │   │   │   │   └── TrashViewModel.kt     [✅ M7]
-│   │   │   │   ├── vault/                    ← Layar Bilik Rahasia & Biometrik (Planned M8)
+│   │   │   │   ├── vault/                    ← Layar Bilik Rahasia & Biometrik
+│   │   │   │   │   (HiddenVaultScreen.kt, BiometricAuthModal, VaultViewModel) [✅ M8]
+│   │   │   │   ├── settings/                 ← Layar Pengaturan Aplikasi
+│   │   │   │   │   ├── SettingsScreen.kt     [✅ M9]
+│   │   │   │   │   └── SettingsViewModel.kt  [✅ M9]
 │   │   │   │   └── theme/                    ← Material 3 Theme, Color, Type & Shape [✅ M1]
 │   │   │   │
 │   │   │   ├── di/                           ← Module Hilt Dependency Injection
 │   │   │   │   ├── AppModule.kt              [✅ M1]
-│   │   │   │   ├── CoilModule.kt             [✅ M2]
-│   │   │   │   └── RepositoryModule.kt       [✅ M2]
+│   │   │   │   └── SettingsModule.kt         [✅ M9]
+│   │   │   │
+│   │   │   ├── util/                         ← Utility & Helper
+│   │   │   │   ├── BiometricHelper.kt        [✅ M8]
+│   │   │   │   └── PinEncryptionHelper.kt    [✅ M8]
 │   │   │   │
 │   │   │   ├── GalleryApplication.kt         [✅ M1]
-│   │   │   └── MainActivity.kt               ← Single Activity & NavHost Setup [✅ M1-M7]
 │   │   │
 │   │   └── AndroidManifest.xml               ← Deklarasi Permissions & Main Activity
 │   │
@@ -209,4 +222,4 @@ Panduan langkah kerja bagi pengembang untuk melakukan kompilasi dan pengujian pr
 
 ---
 
-*Dokumen ini dibuat berdasarkan analisis kode aktual pada 26 Juli 2026.*
+*Dokumen ini dibuat berdasarkan analisis kode aktual pada 28 Juli 2026 | commit: b85c568*

@@ -24,13 +24,13 @@ object Routes {
     const val GALLERY_HOME = "gallery_home"
     const val ALBUM_LIST = "album_list"
     const val ALBUM_DETAIL = "album_detail/{bucketId}/{bucketName}"
-    const val VIEWER = "viewer/{initialIndex}"
+    const val VIEWER = "viewer/{initialPhotoId}"
     const val EDITOR = "editor/{photoUri}"
     const val TRASH = "trash"
     const val VAULT = "vault"
     const val SETTINGS = "settings"
 
-    fun viewerRoute(initialIndex: Int): String = "viewer/$initialIndex"
+    fun viewerRoute(photoId: Long): String = "viewer/$photoId"
     fun albumDetailRoute(bucketId: Long, bucketName: String): String =
         "album_detail/$bucketId/${Uri.encode(bucketName)}"
     fun editorRoute(photoUri: Uri): String = "editor/${Uri.encode(photoUri.toString())}"
@@ -59,8 +59,8 @@ fun AppNavigation() {
 
         composable(Routes.GALLERY_HOME) {
             GalleryHomeScreen(
-                onPhotoClick = { index ->
-                    navController.navigate(Routes.viewerRoute(index))
+                onPhotoClick = { photoId ->
+                    navController.navigate(Routes.viewerRoute(photoId))
                 },
                 onAlbumClick = {
                     navController.navigate(Routes.ALBUM_LIST)
@@ -112,8 +112,8 @@ fun AppNavigation() {
             )
         ) {
             AlbumDetailScreen(
-                onPhotoClick = { index ->
-                    navController.navigate(Routes.viewerRoute(index))
+                onPhotoClick = { photoId ->
+                    navController.navigate(Routes.viewerRoute(photoId))
                 },
                 onBackClick = { navController.popBackStack() }
             )
@@ -122,12 +122,12 @@ fun AppNavigation() {
         composable(
             route = Routes.VIEWER,
             arguments = listOf(
-                navArgument("initialIndex") { type = NavType.IntType }
+                navArgument("initialPhotoId") { type = NavType.LongType }
             )
         ) { backStackEntry ->
-            val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
+            val initialPhotoId = backStackEntry.arguments?.getLong("initialPhotoId") ?: 0L
             ViewerScreen(
-                initialIndex = initialIndex,
+                initialPhotoId = initialPhotoId,
                 onBackClick = { navController.popBackStack() },
                 onEditClick = { uri ->
                     navController.navigate(Routes.editorRoute(uri))

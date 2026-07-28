@@ -2,7 +2,7 @@
 
 Dokumen ini berisi informasi komprehensif mengenai daftar modul dan fitur yang telah dikembangkan dalam aplikasi **Gallery App Android**, serta rincian *technology stack* (tech stack) yang digunakan untuk membangun proyek ini.
 
-> **Versi Dokumen:** v1.9.0-M9 — 26 Juli 2026 | Android Enterprise Application
+> **Versi Dokumen:** v1.1.0 (versionCode 6) — 28 Juli 2026 | Android Enterprise Application
 
 ---
 
@@ -13,16 +13,17 @@ Aplikasi ini dibangun menggunakan arsitektur modern Android berbasis **Kotlin** 
 ### 1. Core Framework & Bahasa
 * **Kotlin (v1.9+)**: Bahasa pemrograman utama yang menawarkan sintaks modern, keamanan pengetikan statis (*null-safety*), dan integrasi Coroutines yang efisien.
 * **Jetpack Compose**: Framework UI deklaratif modern buatan Google untuk membangun antarmuka pengguna Android yang cepat, responsif, dan fleksibel tanpa menggunakan XML layouts.
+* **Lifecycle Runtime Compose (`androidx.lifecycle:lifecycle-runtime-compose`)**: Pengambilan data `StateFlow` secara *lifecycle-aware* (`collectAsStateWithLifecycle`) untuk menghentikan rekomposisi otomatis saat aplikasi berada di background.
 * **Material Design 3 (Material You)**: Komponen UI dasar yang aksesibel, modern, dan mendukung tema adaptif dinamis (*Dynamic Color*).
 
 ### 2. Paginasi & Pengelolaan Media
-* **Jetpack Paging 3 (`androidx.paging:paging-compose`)**: Mengelola kueri berkas foto dari `MediaStore` secara bertahap (*chunking* 60 item per halaman) untuk mencegah masalah kehabisan memori (*Out Of Memory / OOM*) pada galeri berkapasitas ribuan foto.
-* **Coil 3 (`coil-compose`)**: Pustaka pemuat gambar (*image loader*) berbasis Kotlin Coroutines. Dikonfigurasi secara eksplisit melalui `CoilModule` dengan resolusi thumbnail 256px serta *MemoryCache* dan *DiskCache* terukur untuk efisiensi RAM.
+* **Jetpack Paging 3 (`androidx.paging:paging-compose`)**: Mengelola kueri berkas foto dari `MediaStore` secara bertahap (*chunking* 30 item per halaman, `initialLoadSize = 60`, `prefetchDistance = 15`, `maxSize = 200`) untuk mencegah masalah kehabisan memori (*Out Of Memory / OOM*) pada galeri berkapasitas ribuan foto.
+* **Coil 3 (`coil-compose`)**: Pustaka pemuat gambar (*image loader*) berbasis Kotlin Coroutines. Dikonfigurasi secara terpusat pada `GalleryApplication` dengan *MemoryCache* (30% heap) dan *DiskCache* (5% disk) terukur, serta *ImageLoader* terisolasi tanpa cache khusus untuk Vault.
 
 ### 3. Arsitektur & Dependency Injection
 * **MVVM (Model-View-ViewModel)**: Pola arsitektur resmi Android untuk memisahkan logika bisnis dari lapisan UI.
-* **Hilt (Jetpack Dependency Injection)**: Framework injeksi dependensi terpusat (`AppModule`, `CoilModule`, `RepositoryModule`) untuk mengelola siklus hidup ViewModel, Repository, dan Service.
-* **Coroutines & Flow**: Pemrograman asinkron berbasis aliran data (*reactive stream*) untuk mengeksekusi kueri `ContentResolver` pada thread `Dispatchers.IO` tanpa mengganggu kelancaran UI (120fps UI thread).
+* **Hilt (Jetpack Dependency Injection)**: Framework injeksi dependensi terpusat (`AppModule`, `SettingsModule`) untuk mengelola siklus hidup ViewModel, Repository, dan Service.
+* **Coroutines & Flow**: Pemrograman asinkron berbasis aliran data (*reactive stream*) untuk mengeksekusi kueri `ContentResolver` pada thread `Dispatchers.IO` tanpa mengganggu kelancaran UI (60fps/120fps UI thread).
 
 ### 4. Keamanan & Storage
 * **Scoped Storage API**: Kepatuhan penuh terhadap aturan akses media Android 10+ (API 29+), menggunakan `MediaStore.createDeleteRequest()` dan `MediaStore.createTrashRequest()`.
@@ -90,6 +91,10 @@ Seluruh modul dikembangkan berdasarkan alur penggunaan galeri Android yang efisi
 - **Release Signing Config**: Konfigurasi penandatanganan digital APK (*signingConfig*) membaca kredensial keystore dari `local.properties` (non-Git) untuk keamanan penuh.
 - **APK Release Siap Distribusi**: Output final `./gradlew assembleRelease` menghasilkan `app-release.apk` ter-sign dan teroptimasi, siap di-install di perangkat fisik atau diunggah ke Play Store.
 
+### ⚙️ Modul 10: Settings (Pengaturan Aplikasi) `[✅ TERIMPLEMENTASI]`
+- **Layar Pengaturan**: Antarmuka pengaturan preferensi aplikasi (`SettingsScreen.kt`) dengan state terisolasi via `SettingsViewModel.kt`.
+- **Integrasi Hilt**: Modul Settings teregistrasi via `SettingsModule.kt` untuk penyediaan dependensi yang terisolasi.
+
 ---
 
 ## 💡 Konsep Logika Bisnis & Keamanan
@@ -100,4 +105,4 @@ Seluruh modul dikembangkan berdasarkan alur penggunaan galeri Android yang efisi
 
 ---
 
-*Terakhir diperbarui: 26 Juli 2026 | v1.9.0-M9 — Seluruh milestone M1–M9 selesai diimplementasi.*
+*Terakhir diperbarui: 28 Juli 2026 | v1.1.0 (versionCode 6) — Seluruh modul teroptimasi, berjalan lancar di perangkat fisik.*

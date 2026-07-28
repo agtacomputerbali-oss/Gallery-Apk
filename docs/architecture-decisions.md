@@ -17,6 +17,7 @@
 | [ADR-005](#adr-005) | Isolation & Vault Security: Private App Storage + Hardware BiometricPrompt | ✅ Diputuskan | 2026-07-26 |
 | [ADR-006](#adr-006) | Lightweight Image Editor: Compose Canvas Crop & ColorMatrix Filter | ✅ Diputuskan | 2026-07-26 |
 | [ADR-007](#adr-007) | Dependency Injection & Version Management: Hilt DI + Gradle Version Catalog | ✅ Diputuskan | 2026-07-26 |
+| [ADR-008](#adr-008) | Performance Optimization & Vault Cache Isolation Strategy | ✅ Diputuskan | 2026-07-28 |
 
 ---
 
@@ -174,4 +175,28 @@ Manajemen dependensi dan pemisahan modul pada aplikasi Android memerlukan arsite
 
 ---
 
-*Terakhir diperbarui: 26 Juli 2026*
+## ADR-008
+## Performance Optimization & Vault Cache Isolation Strategy
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Scrolling grid galeri mengalami penurunan frame rate (jank) karena tidak tersedianya pembatasan cache memori eksplisit, durasi animasi crossfade yang terlalu lama pada thumbnail, dan pengumpulan Flow yang tidak *lifecycle-aware*. Selain itu, pemuatan berkas vault menggunakan `ImageLoader` global berisiko menyisakan berkas thumbnail terdekode di *disk/memory cache* publik.
+
+**Keputusan**:
+1. **Global ImageLoader Singleton**: Dikonfigurasi di `GalleryApplication` dengan `MemoryCache` max 30% heap limit dan `DiskCache` max 5% disk limit.
+2. **Vault Cache Isolation**: Memuat thumbnail `VaultScreen` menggunakan `ImageLoader` terisolasi tanpa memory cache dan disk cache (`memoryCache(null)`, `diskCache(null)`).
+3. **Lifecycle-Aware State Collection**: Seluruh Composable screen migrasi ke `collectAsStateWithLifecycle()` dari pustaka `androidx.lifecycle:lifecycle-runtime-compose`.
+4. **PagingConfig Tuning**: Menyesuaikan `pageSize = 30`, `initialLoadSize = 60`, `prefetchDistance = 15`, dan `maxSize = 200` untuk membatasi ukuran heap memori.
+
+**Alasan**:
+- Menjamin scroll grid berjalan di 60fps/120fps tanpa risiko OOM crash.
+- Menjamin keamanan dan privasi berkas vault dari potensi kebocoran cache ke direktori publik.
+- Mencegah pengolahan data dan rekomposisi UI yang tidak perlu saat aplikasi berada di background.
+
+**Konsekuensi**:
+- Seluruh screen Composable wajib menggunakan `collectAsStateWithLifecycle()`.
+
+---
+
+*Terakhir diperbarui: 28 Juli 2026 | v1.1.0 (versionCode 6)*

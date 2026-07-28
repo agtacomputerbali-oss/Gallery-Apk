@@ -33,7 +33,9 @@ class MediaRepositoryImpl @Inject constructor(
             config = PagingConfig(
                 pageSize = PAGE_SIZE,
                 enablePlaceholders = false,
-                initialLoadSize = PAGE_SIZE * 2
+                initialLoadSize = PAGE_SIZE * 2,
+                prefetchDistance = 15,
+                maxSize = 200
             ),
             pagingSourceFactory = { MediaPagingSource(context) }
         ).flow
@@ -49,7 +51,9 @@ class MediaRepositoryImpl @Inject constructor(
             config = PagingConfig(
                 pageSize = PAGE_SIZE,
                 enablePlaceholders = false,
-                initialLoadSize = PAGE_SIZE * 2
+                initialLoadSize = PAGE_SIZE * 2,
+                prefetchDistance = 15,
+                maxSize = 200
             ),
             pagingSourceFactory = { MediaPagingSource(context, bucketId) }
         ).flow
@@ -60,7 +64,9 @@ class MediaRepositoryImpl @Inject constructor(
             config = PagingConfig(
                 pageSize = PAGE_SIZE,
                 enablePlaceholders = false,
-                initialLoadSize = PAGE_SIZE * 2
+                initialLoadSize = PAGE_SIZE * 2,
+                prefetchDistance = 15,
+                maxSize = 200
             ),
             pagingSourceFactory = { MediaPagingSource(context, isTrashed = true) }
         ).flow

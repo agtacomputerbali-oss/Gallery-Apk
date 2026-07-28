@@ -56,7 +56,7 @@ fun PhotoThumbnail(
             model = ImageRequest.Builder(context)
                 .data(photo.uri)
                 .size(256)
-                .crossfade(true)
+                .crossfade(50)
                 .build(),
             contentDescription = photo.displayName,
             contentScale = ContentScale.Crop,

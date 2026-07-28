@@ -43,7 +43,7 @@ import com.gallery.app.ui.components.PhotoThumbnail
 @Composable
 fun AlbumDetailScreen(
     viewModel: AlbumDetailViewModel = hiltViewModel(),
-    onPhotoClick: (Int) -> Unit = {},
+    onPhotoClick: (Long) -> Unit = {},
     onBackClick: () -> Unit = {}
 ) {
     val lazyPagingItems: LazyPagingItems<PhotoItem> = viewModel.photosState.collectAsLazyPagingItems()
@@ -142,7 +142,7 @@ fun AlbumDetailScreen(
                             if (photo != null) {
                                 PhotoThumbnail(
                                     photo = photo,
-                                    onClick = { onPhotoClick(index) }
+                                    onClick = { onPhotoClick(photo.id) }
                                 )
                             }
                         }

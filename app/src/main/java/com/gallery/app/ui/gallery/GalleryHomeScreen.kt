@@ -37,8 +37,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,7 +57,7 @@ import com.gallery.app.ui.components.PhotoThumbnail
 @Composable
 fun GalleryHomeScreen(
     viewModel: GalleryViewModel = hiltViewModel(),
-    onPhotoClick: (Int) -> Unit = {},
+    onPhotoClick: (Long) -> Unit = {},
     onAlbumClick: () -> Unit = {},
     onTrashClick: () -> Unit = {},
     onVaultClick: () -> Unit = {},
@@ -64,7 +65,7 @@ fun GalleryHomeScreen(
 ) {
     val context = LocalContext.current
     val lazyPagingItems: LazyPagingItems<PhotoItem> = viewModel.photosState.collectAsLazyPagingItems()
-    val multiSelectState by viewModel.multiSelectState.collectAsState()
+    val multiSelectState by viewModel.multiSelectState.collectAsStateWithLifecycle()
 
     val deleteLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -259,15 +260,18 @@ fun GalleryHomeScreen(
                         ) { index ->
                             val photo = lazyPagingItems[index]
                             if (photo != null) {
+                                val isSelected = remember(multiSelectState.selectedPhotos, photo.id) {
+                                    multiSelectState.selectedPhotos.contains(photo)
+                                }
                                 PhotoThumbnail(
                                     photo = photo,
                                     isSelectionMode = multiSelectState.isSelectionMode,
-                                    isSelected = multiSelectState.selectedPhotos.contains(photo),
+                                    isSelected = isSelected,
                                     onClick = {
                                         if (multiSelectState.isSelectionMode) {
                                             viewModel.togglePhotoSelection(photo)
                                         } else {
-                                            onPhotoClick(index)
+                                            onPhotoClick(photo.id)
                                         }
                                     },
                                     onLongClick = {

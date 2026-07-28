@@ -38,13 +38,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -59,7 +60,7 @@ fun TrashScreen(
     viewModel: TrashViewModel = hiltViewModel()
 ) {
     val lazyPagingItems: LazyPagingItems<PhotoItem> = viewModel.trashedPhotosState.collectAsLazyPagingItems()
-    val multiSelectState by viewModel.multiSelectState.collectAsState()
+    val multiSelectState by viewModel.multiSelectState.collectAsStateWithLifecycle()
 
     val intentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -257,10 +258,13 @@ fun TrashScreen(
                             ) { index ->
                                 val photo = lazyPagingItems[index]
                                 if (photo != null) {
+                                    val isSelected = remember(multiSelectState.selectedPhotos, photo.id) {
+                                        multiSelectState.selectedPhotos.contains(photo)
+                                    }
                                     PhotoThumbnail(
                                         photo = photo,
                                         isSelectionMode = multiSelectState.isSelectionMode,
-                                        isSelected = multiSelectState.selectedPhotos.contains(photo),
+                                        isSelected = isSelected,
                                         onClick = {
                                             if (multiSelectState.isSelectionMode) {
                                                 viewModel.togglePhotoSelection(photo)

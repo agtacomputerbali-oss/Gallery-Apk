@@ -94,4 +94,4 @@ Seluruh warna didefinisikan menggunakan **Material 3 Color Scheme** (`Color.kt` 
 ---
 
 *Single Source of Truth untuk: Gallery App Android — Jetpack Compose + Material 3*
-*Terakhir diperbarui: 26 Juli 2026*
+*Terakhir diperbarui: 28 Juli 2026*

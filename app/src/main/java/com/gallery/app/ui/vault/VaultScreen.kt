@@ -41,6 +41,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.gallery.app.domain.model.VaultItem
@@ -63,7 +65,7 @@ fun VaultScreen(
     viewModel: VaultViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val fragmentActivity = rememberFragmentActivity(context)
 
@@ -225,16 +227,23 @@ fun VaultScreen(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(File(item.vaultFilePath))
-                                            .size(256)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = item.originalName,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
+                                     val vaultImageLoader = remember(context) {
+                                         coil.ImageLoader.Builder(context)
+                                             .memoryCache(null)
+                                             .diskCache(null)
+                                             .build()
+                                     }
+
+                                     AsyncImage(
+                                         model = ImageRequest.Builder(context)
+                                             .data(File(item.vaultFilePath))
+                                             .size(256)
+                                             .build(),
+                                         imageLoader = vaultImageLoader,
+                                         contentDescription = item.originalName,
+                                         contentScale = ContentScale.Crop,
+                                         modifier = Modifier.fillMaxSize()
+                                     )
 
                                     if (uiState.isSelectionMode) {
                                         Box(

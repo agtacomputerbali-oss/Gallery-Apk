@@ -23,7 +23,7 @@ Aplikasi Galeri Android modern, performa tinggi, dan kaya fitur yang dibangun me
 | **Bahasa** | Kotlin | Bahasa resmi utama Android dengan dukungan Coroutines & Flow |
 | **Antarmuka UI** | Jetpack Compose + Material 3 | UI deklaratif modern dengan sistem warna & animasi M3 |
 | **Large List / Grid** | Jetpack Paging 3 (`paging-compose`) | Paginasi otomatis query `MediaStore` per chunk 60 item |
-| **Image Loading** | Coil 2 (`coil-compose`) | Cache memori & disk khusus (thumbnail 256px) untuk cegah OOM |
+| **Image Loading** | Coil 2.6.0 (`coil-compose`) | Cache memori & disk khusus (thumbnail 256px) untuk cegah OOM |
 | **Arsitektur** | MVVM + Repository + Hilt DI | Separation of concerns & Injeksi Dependensi terisolasi |
 | **Async & Stream** | Coroutines + Flow | Eksekusi kueri `ContentResolver` di `Dispatchers.IO` |
 | **Keamanan** | BiometricPrompt + Encrypted DataStore | Autentikasi biometrik & penyimpanan PIN terenkripsi hardware |
@@ -36,7 +36,7 @@ Aplikasi Galeri Android modern, performa tinggi, dan kaya fitur yang dibangun me
 
 - **Android Studio**: Ladybug / Jellyfish (atau versi lebih baru)
 - **JDK**: Java 17 / 21
-- **Android SDK**: Min SDK 26 (Android 8.0), Target SDK 34/35
+- **Android SDK**: Min SDK 26 (Android 8.0), Target SDK 35 | App Version: 1.1.0 (versionCode 6)
 - **Gradle**: 8.x+ dengan Kotlin DSL
 
 ---
@@ -71,24 +71,26 @@ Proyek ini menerapkan arsitektur **MVVM (Model-View-ViewModel)** dengan prinsip 
 app/
 ├── src/main/java/com/gallery/app/
 │   ├── data/
-│   │   ├── local/            # Encrypted DataStore & Internal File Vault Manager
 │   │   ├── paging/           # MediaPagingSource (ContentResolver MediaStore query)
 │   │   └── repository/       # MediaRepositoryImpl
 │   ├── domain/
 │   │   ├── model/            # PhotoItem, Album, VaultItem
 │   │   ├── repository/       # MediaRepository (Interface & Contracts)
-│   │   └── usecase/          # Business logic (Crop, Filter, Trash, Vault)
+│   │   └── usecase/          # 9 Use Cases (Delete, Share, HidePhotos, RestoreVault, SaveEdited, dll)
 │   ├── ui/
+│   │   ├── main/             # AppNavigation.kt & MainActivity.kt (NavHost Setup)
 │   │   ├── album/            # AlbumListScreen, AlbumDetailScreen, AlbumViewModel
 │   │   ├── components/       # SelectionTopAppBar & Reusable Compose Components
 │   │   ├── editor/           # ImageEditorScreen & EditorViewModel (Compose Canvas Crop & ColorMatrix)
 │   │   ├── gallery/          # GalleryGridScreen & GalleryViewModel
 │   │   ├── permission/       # PermissionScreen & PermissionState (READ_MEDIA_IMAGES)
+│   │   ├── settings/         # SettingsScreen & SettingsViewModel
 │   │   ├── trash/            # TrashScreen & TrashViewModel (Scoped Storage Trash)
 │   │   ├── vault/            # HiddenVaultScreen, BiometricAuthModal
 │   │   ├── viewer/           # MediaViewerScreen, ZoomableImage, PhotoInfoBottomSheet
 │   │   └── theme/            # Material 3 Color, Type, Shape & Theme
-│   └── di/                   # Hilt Modules (AppModule, CoilModule, RepositoryModule)
+│   ├── di/                   # Hilt Modules (AppModule, SettingsModule)
+│   └── util/                 # BiometricHelper, PinEncryptionHelper
 └── src/test/java/com/gallery/app/
     └── data/paging/          # MediaPagingSourceTest (Unit Tests)
 ```
@@ -98,4 +100,4 @@ app/
 ## 📄 Lisensi & Hak Cipta
 
 Dokumentasi dan kode sumber dikembangkan untuk penggunaan internal enterprise.
-*Terakhir diperbarui: 28 Juli 2026*
+*Terakhir diperbarui: 28 Juli 2026 | v1.1.0 (versionCode 6) — Berhasil running di perangkat fisik*

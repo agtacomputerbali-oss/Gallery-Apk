@@ -21,6 +21,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.gallery.app.domain.model.PhotoItem
 
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+
 @Composable
 fun ZoomableImage(
     photo: PhotoItem,
@@ -32,40 +35,48 @@ fun ZoomableImage(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
+    val displayMetrics = context.resources.displayMetrics
+    val screenWidth = displayMetrics.widthPixels
+    val screenHeight = displayMetrics.heightPixels
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onTap() },
-                    onDoubleTap = {
-                        if (scale > 1f) {
-                            scale = 1f
-                            offset = Offset.Zero
-                            onZoomStateChanged(false)
-                        } else {
-                            scale = 2.5f
-                            offset = Offset.Zero
-                            onZoomStateChanged(true)
-                        }
-                    }
-                )
-            }
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(1f, 4f)
-                    val isZoomed = newScale > 1f
-                    onZoomStateChanged(isZoomed)
-
-                    if (isZoomed) {
-                        scale = newScale
-                        offset = Offset(
-                            x = offset.x + pan.x,
-                            y = offset.y + pan.y
+            .pointerInput(photo.uri) {
+                coroutineScope {
+                    launch {
+                        detectTapGestures(
+                            onTap = { onTap() },
+                            onDoubleTap = {
+                                if (scale > 1f) {
+                                    scale = 1f
+                                    offset = Offset.Zero
+                                    onZoomStateChanged(false)
+                                } else {
+                                    scale = 2.5f
+                                    offset = Offset.Zero
+                                    onZoomStateChanged(true)
+                                }
+                            }
                         )
-                    } else {
-                        scale = 1f
-                        offset = Offset.Zero
+                    }
+                    launch {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            val newScale = (scale * zoom).coerceIn(1f, 4f)
+                            val isZoomed = newScale > 1f
+                            onZoomStateChanged(isZoomed)
+
+                            if (isZoomed) {
+                                scale = newScale
+                                offset = Offset(
+                                    x = offset.x + pan.x,
+                                    y = offset.y + pan.y
+                                )
+                            } else {
+                                scale = 1f
+                                offset = Offset.Zero
+                            }
+                        }
                     }
                 }
             },
@@ -74,7 +85,10 @@ fun ZoomableImage(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(photo.uri)
-                .crossfade(true)
+                .size(screenWidth, screenHeight)
+                .crossfade(150)
+                .memoryCacheKey(photo.uri.toString())
+                .placeholderMemoryCacheKey(photo.uri.toString())
                 .build(),
             contentDescription = photo.displayName,
             contentScale = ContentScale.Fit,

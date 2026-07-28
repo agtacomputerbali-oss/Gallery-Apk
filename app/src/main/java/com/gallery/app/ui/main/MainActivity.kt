@@ -7,8 +7,8 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import com.gallery.app.ui.settings.SettingsViewModel
@@ -24,7 +24,7 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            val appTheme by settingsViewModel.themeModeState.collectAsState()
+            val appTheme by settingsViewModel.themeModeState.collectAsStateWithLifecycle()
 
             GalleryTheme(appTheme = appTheme) {
                 Surface(

@@ -41,6 +41,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -58,7 +60,7 @@ import java.util.Locale
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ViewerScreen(
-    initialIndex: Int,
+    initialPhotoId: Long,
     onBackClick: () -> Unit,
     onEditClick: (Uri) -> Unit = {},
     viewModel: ViewerViewModel = hiltViewModel()
@@ -67,6 +69,7 @@ fun ViewerScreen(
     val lazyPagingItems: LazyPagingItems<PhotoItem> = viewModel.photosState.collectAsLazyPagingItems()
     var isOverlayVisible by remember { mutableStateOf(true) }
     var isZoomed by remember { mutableStateOf(false) }
+    var hasInitialScrolled by rememberSaveable { mutableStateOf(false) }
 
     val deleteLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -78,9 +81,21 @@ fun ViewerScreen(
 
     val totalCount = lazyPagingItems.itemCount
     val pagerState = rememberPagerState(
-        initialPage = initialIndex.coerceIn(0, (totalCount - 1).coerceAtLeast(0)),
+        initialPage = 0,
         pageCount = { totalCount }
     )
+
+    LaunchedEffect(lazyPagingItems.itemCount, initialPhotoId) {
+        if (lazyPagingItems.itemCount > 0 && !hasInitialScrolled) {
+            val targetIndex = (0 until lazyPagingItems.itemCount).firstOrNull { index ->
+                lazyPagingItems.peek(index)?.id == initialPhotoId
+            }
+            if (targetIndex != null) {
+                pagerState.scrollToPage(targetIndex)
+                hasInitialScrolled = true
+            }
+        }
+    }
 
     val currentPhoto = if (totalCount > 0 && pagerState.currentPage < totalCount) {
         lazyPagingItems[pagerState.currentPage]
@@ -124,11 +139,11 @@ fun ViewerScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (currentPhoto != null && currentPhoto.dateTaken > 0) {
-                            val formattedDate = SimpleDateFormat(
-                                "dd MMM yyyy, HH:mm",
-                                Locale.getDefault()
-                            ).format(Date(currentPhoto.dateTaken))
+                        val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+                        val formattedDate = remember(currentPhoto?.dateTaken) {
+                            currentPhoto?.dateTaken?.let { if (it > 0) dateFormatter.format(Date(it)) else null }
+                        }
+                        if (formattedDate != null) {
                             Text(
                                 text = formattedDate,
                                 style = MaterialTheme.typography.bodySmall,

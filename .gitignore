@@ -14,4 +14,8 @@ local.properties
 *.keystore
 release-key.jks
 .agents/
-
+*.apk
+*.aab
+*.log
+*.hprof
+*.lnk

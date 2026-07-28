@@ -108,7 +108,7 @@ class MediaPagingSource(
                         )
                     }
                 } catch (e: Exception) {
-                    val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
+                    val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC LIMIT $limit OFFSET $offset"
                     context.contentResolver.query(
                         MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                         projection,
