@@ -22,7 +22,7 @@
         android:theme="@style/Theme.GalleryApp">
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.gallery.app.ui.main.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.GalleryApp">
             <intent-filter>

@@ -44,9 +44,9 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "app/build/outputs/apk/debug/*.apk"
-          tag: "v1.0.1"
+          tag: "v1.0.2"
           name: "Gallery APK (Debug Release)"
-          body: "Direct 1-Click Download APK untuk perangkat Android. Berkas APK dikompresi dengan nama versi otomatis."
+          body: "Direct 1-Click Download APK untuk perangkat Android (Android 15 Compatible). Berkas APK dikompresi dengan nama versi otomatis."
           allowUpdates: true
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
