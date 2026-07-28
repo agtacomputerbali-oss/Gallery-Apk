@@ -140,14 +140,15 @@ class MediaRepositoryImpl @Inject constructor(
         )
 
         cursor?.use { c ->
-            val idCol = c.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            val bucketIdCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
-            val bucketNameCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+            val idCol = c.getColumnIndex(MediaStore.Images.Media._ID)
+            val bucketIdCol = c.getColumnIndex(MediaStore.Images.Media.BUCKET_ID)
+            val bucketNameCol = c.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
 
             while (c.moveToNext()) {
+                if (idCol == -1 || bucketIdCol == -1) continue
                 val id = c.getLong(idCol)
                 val bucketId = c.getLong(bucketIdCol)
-                val bucketName = c.getString(bucketNameCol) ?: "Umum"
+                val bucketName = if (bucketNameCol != -1) c.getString(bucketNameCol) ?: "Umum" else "Umum"
 
                 val albumInfo = albumMap.getOrPut(bucketId) {
                     val coverUri = ContentUris.withAppendedId(

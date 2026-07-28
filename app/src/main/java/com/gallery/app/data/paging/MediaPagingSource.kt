@@ -3,6 +3,7 @@ package com.gallery.app.data.paging
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
+import android.database.Cursor
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -67,61 +68,83 @@ class MediaPagingSource(
                     selectionArgsList.toTypedArray()
                 } else null
 
-                val queryArgs = Bundle().apply {
-                    putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
-                    putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
-                    putStringArray(
-                        ContentResolver.QUERY_ARG_SORT_COLUMNS,
-                        arrayOf(MediaStore.Images.Media.DATE_TAKEN)
+                val cursor: Cursor? = try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val queryArgs = Bundle().apply {
+                            putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
+                            putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
+                            putStringArray(
+                                ContentResolver.QUERY_ARG_SORT_COLUMNS,
+                                arrayOf(MediaStore.Images.Media.DATE_TAKEN)
+                            )
+                            putInt(
+                                ContentResolver.QUERY_ARG_SORT_DIRECTION,
+                                ContentResolver.QUERY_SORT_DIRECTION_DESCENDING
+                            )
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && isTrashed) {
+                                putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, 2)
+                            }
+                            if (selection != null) {
+                                putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+                            }
+                            if (selectionArgs != null) {
+                                putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
+                            }
+                        }
+                        context.contentResolver.query(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            projection,
+                            queryArgs,
+                            null
+                        )
+                    } else {
+                        val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC LIMIT $limit OFFSET $offset"
+                        context.contentResolver.query(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            projection,
+                            selection,
+                            selectionArgs,
+                            sortOrder
+                        )
+                    }
+                } catch (e: Exception) {
+                    val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
+                    context.contentResolver.query(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        sortOrder
                     )
-                    putInt(
-                        ContentResolver.QUERY_ARG_SORT_DIRECTION,
-                        ContentResolver.QUERY_SORT_DIRECTION_DESCENDING
-                    )
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && isTrashed) {
-                        putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, 2) // MediaStore.MATCH_TRASHED_ONLY
-                    }
-                    if (selection != null) {
-                        putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
-                    }
-                    if (selectionArgs != null) {
-                        putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
-                    }
                 }
 
-                val cursor = context.contentResolver.query(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    projection,
-                    queryArgs,
-                    null
-                )
-
                 cursor?.use { c ->
-                    val idColumn = c.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                    val displayNameColumn = c.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
-                    val dateTakenColumn = c.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
-                    val sizeColumn = c.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
-                    val widthColumn = c.getColumnIndexOrThrow(MediaStore.Images.Media.WIDTH)
-                    val heightColumn = c.getColumnIndexOrThrow(MediaStore.Images.Media.HEIGHT)
-                    val mimeTypeColumn = c.getColumnIndexOrThrow(MediaStore.Images.Media.MIME_TYPE)
-                    val orientationColumn = c.getColumnIndexOrThrow(MediaStore.Images.Media.ORIENTATION)
+                    val idColumn = c.getColumnIndex(MediaStore.Images.Media._ID)
+                    val displayNameColumn = c.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+                    val dateTakenColumn = c.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)
+                    val sizeColumn = c.getColumnIndex(MediaStore.Images.Media.SIZE)
+                    val widthColumn = c.getColumnIndex(MediaStore.Images.Media.WIDTH)
+                    val heightColumn = c.getColumnIndex(MediaStore.Images.Media.HEIGHT)
+                    val mimeTypeColumn = c.getColumnIndex(MediaStore.Images.Media.MIME_TYPE)
+                    val orientationColumn = c.getColumnIndex(MediaStore.Images.Media.ORIENTATION)
                     val isTrashedColumn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         c.getColumnIndex(MediaStore.MediaColumns.IS_TRASHED)
                     } else -1
 
                     while (c.moveToNext()) {
+                        if (idColumn == -1) continue
                         val id = c.getLong(idColumn)
                         val uri = ContentUris.withAppendedId(
                             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                             id
                         )
-                        val displayName = c.getString(displayNameColumn) ?: ""
-                        val dateTaken = c.getLong(dateTakenColumn)
-                        val size = c.getLong(sizeColumn)
-                        val width = c.getInt(widthColumn)
-                        val height = c.getInt(heightColumn)
-                        val mimeType = c.getString(mimeTypeColumn) ?: "image/*"
-                        val orientation = c.getInt(orientationColumn)
+                        val displayName = if (displayNameColumn != -1) c.getString(displayNameColumn) ?: "" else ""
+                        val dateTaken = if (dateTakenColumn != -1) c.getLong(dateTakenColumn) else 0L
+                        val size = if (sizeColumn != -1) c.getLong(sizeColumn) else 0L
+                        val width = if (widthColumn != -1) c.getInt(widthColumn) else 0
+                        val height = if (heightColumn != -1) c.getInt(heightColumn) else 0
+                        val mimeType = if (mimeTypeColumn != -1) c.getString(mimeTypeColumn) ?: "image/*" else "image/*"
+                        val orientation = if (orientationColumn != -1) c.getInt(orientationColumn) else 0
                         val isTrashed = if (isTrashedColumn != -1) {
                             c.getInt(isTrashedColumn) == 1
                         } else false
