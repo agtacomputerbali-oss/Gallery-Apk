@@ -21,9 +21,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.draw.clip
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.gallery.app.domain.model.PhotoItem
+
+import coil.size.Precision
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -55,13 +60,33 @@ fun PhotoThumbnail(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(photo.uri)
+                .memoryCacheKey("${photo.uri}_${photo.dateTaken}")
+                .crossfade(false)
                 .size(256)
-                .crossfade(50)
+                .precision(Precision.INEXACT)
                 .build(),
             contentDescription = photo.displayName,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
+
+        if (photo.mimeType.startsWith("video/")) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(4.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Video",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
 
         if (isSelectionMode) {
             Box(

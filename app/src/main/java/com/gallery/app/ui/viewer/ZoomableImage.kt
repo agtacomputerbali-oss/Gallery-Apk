@@ -87,8 +87,8 @@ fun ZoomableImage(
                 .data(photo.uri)
                 .size(screenWidth, screenHeight)
                 .crossfade(150)
-                .memoryCacheKey(photo.uri.toString())
-                .placeholderMemoryCacheKey(photo.uri.toString())
+                .memoryCacheKey("${photo.uri}_${photo.dateTaken}")
+                .placeholderMemoryCacheKey("${photo.uri}_${photo.dateTaken}")
                 .build(),
             contentDescription = photo.displayName,
             contentScale = ContentScale.Fit,

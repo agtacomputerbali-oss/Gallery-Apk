@@ -18,8 +18,18 @@
 | [ADR-006](#adr-006) | Lightweight Image Editor: Compose Canvas Crop & ColorMatrix Filter | ✅ Diputuskan | 2026-07-26 |
 | [ADR-007](#adr-007) | Dependency Injection & Version Management: Hilt DI + Gradle Version Catalog | ✅ Diputuskan | 2026-07-26 |
 | [ADR-008](#adr-008) | Performance Optimization & Vault Cache Isolation Strategy | ✅ Diputuskan | 2026-07-28 |
+| [ADR-009](#adr-009) | Local Metadata Caching (Room Database) & Background Indexing (WorkManager) | ✅ Diputuskan | 2026-07-28 |
+| [ADR-010](#adr-010) | Multimedia Hub & Embedded Video Player: Jetpack Media3 (ExoPlayer) | ✅ Diputuskan | 2026-07-28 |
+| [ADR-011](#adr-011) | Smart Organization: Custom DCT pHash, One-tap Bulk Cleanup, & Smart Albums | ✅ Diputuskan | 2026-07-28 |
+| [ADR-012](#adr-012) | Dynamic MediaStore Sorting & 1-Click Selection State Strategy | ✅ Diputuskan | 2026-07-28 |
+| [ADR-013](#adr-013) | Codebase Hardening, Dependency Injection Dispatchers, & Vault Security Enhancement | ✅ Diputuskan | 2026-07-28 |
+| [ADR-014](#adr-014) | Universal Media Type Filtering Strategy via Floating Dock Control | ✅ Diputuskan | 2026-07-29 |
+| [ADR-015](#adr-015) | DataStore Preferences Architecture for App Settings & Dynamic M3 Accent Colors | ✅ Diputuskan | 2026-07-29 |
+| [ADR-016](#adr-016) | Comprehensive Photo Editor Engine (Canvas Live Preview, Adjustments, Presets & Export) | ✅ Diputuskan | 2026-07-29 |
+| [ADR-017](#adr-017) | Android 15 Edge-to-Edge Compatibility & Target SDK 35 Upgrade | ✅ Diputuskan | 2026-07-29 |
 
 ---
+
 
 ## ADR-001
 ## Arsitektur UI: Single-Activity Jetpack Compose (Tanpa XML Layouts)
@@ -199,4 +209,209 @@ Scrolling grid galeri mengalami penurunan frame rate (jank) karena tidak tersedi
 
 ---
 
-*Terakhir diperbarui: 28 Juli 2026 | v1.1.0 (versionCode 6)*
+## ADR-009
+## Local Metadata Caching (Room Database) & Background Indexing (WorkManager)
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Mengueri `ContentResolver` MediaStore berulang kali pada setiap pembukaan layar galeri atau penyaringan data tidak dapat diskalakan secara efisien untuk perangkat yang memiliki puluhan ribu berkas media. Selain itu, fitur lanjutan Fase P2 (Duplicate Photo Finder & Smart Albums) membutuhkan pencarian dan perbandingan metadata yang cepat secara offline tanpa membebankan thread utama.
+
+**Keputusan**:
+Menerapkan strategi **Hybrid Cache-First (Opsi A)**:
+1. **Room Database**: Menyiapkan `GalleryDatabase`, `CachedPhotoEntity` (termasuk kolom EXIF GPS `latitude`, `longitude`), dan `PhotoDao` untuk pengindeksan metadata lokal.
+2. **WorkManager Background Indexing**: Menjalankan `IndexingWorker` (`CoroutineWorker`) di `Dispatchers.IO` dengan constraint `setRequiresBatteryNotLow(true)` untuk mengesktrak metadata dari `MediaStore` dan menyimpannya ke Room DB tanpa memblokir thread UI.
+3. **Reaktif ContentObserver**: Menggunakan `MediaStoreObserver` untuk mendeteksi perubahan berkas media secara real-time dan memicu pemutakhiran cache inkremental otomatis (debounced 3 detik).
+4. **Settings Hatch**: Menyiapkan seksi kartu pada `SettingsScreen` yang menyajikan status jumlah foto ter-index di Room DB dan tombol manual trigger `Sinkronkan Ulang Index`.
+
+**Alasan**:
+- Menghilangkan *delay* initial load saat aplikasi dibuka dan menyediakan pencarian metadata super cepat.
+- UI grid galeri utama tetap real-time (`MediaPagingSource`) tanpa risiko *stale data*, sementara Room DB siap digunakan sebagai fondasi pengolahan AI/ML di Fase P2.
+- Operasi I/O dieksekusi terisolasi pada background thread tanpa menyebabkan *Application Not Responding (ANR)*.
+
+**Konsekuensi**:
+- Memerlukan tambahan pustaka `androidx.room` (v2.6.1) dan `androidx.work` (v2.9.0) di `libs.versions.toml`.
+- Schema Room menyertakan bidang GPS sejak awal untuk menghindari migrasi basis data berulang di Fase P2.
+
+---
+
+## ADR-010
+## Multimedia Hub & Embedded Video Player: Jetpack Media3 (ExoPlayer)
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Pengguna membutuhkan pemutaran berkas video secara internal di dalam aplikasi tanpa harus dialihkan ke aplikasi eksternal (*Intent launcher*).
+
+**Keputusan**:
+1. Menggunakan **Jetpack Media3 (v1.3.1)** (`media3-exoplayer`, `media3-ui`, `media3-common`).
+2. Membuat `VideoPlayerScreen` berbasis `AndroidView` + `PlayerView` yang dikendalikan oleh `VideoPlayerViewModel`.
+3. Menerapkan pelepasan memori otomatis `player.release()` menggunakan `DisposableEffect` saat pengguna keluar dari layar pemutar video.
+
+**Alasan**:
+- Media3 adalah standar resmi Google untuk multimedia di Android dengan pemutaran video yang sangat stabil dan hemat daya.
+- Mencegah kebocoran memori (*memory leak*) pada ExoPlayer `Player` instance.
+
+**Konsekuensi**:
+- Penambahan 3 library `androidx.media3` di `libs.versions.toml` dan `app/build.gradle.kts`.
+
+---
+
+## ADR-011
+## Smart Organization: Custom DCT pHash, One-tap Bulk Cleanup, & Smart Albums
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Pembersihan galeri dari berkas duplikat dan pengelompokan otomatis album pintar membutuhkan pengolahan metadata dan algoritma kemiripan gambar (*perceptual hashing*).
+
+**Keputusan**:
+1. **Custom pHash Calculator**: Mengimplementasikan algoritma Discrete Cosine Transform (DCT) 64-bit berbasis Android `Bitmap` API (`PHashCalculator.kt`) dengan perbandingan Hamming distance (threshold ≤ 10). Zero external dependency.
+2. **Room Migration (v1 → v2)**: Menambahkan kolom `pHash TEXT` dan index `index_cached_photos_pHash` di `CachedPhotoEntity` dengan `MIGRATION_1_2`.
+3. **One-tap Bulk Cleanup**: Tombol "✨ Bersihkan Semua" di `DuplicateScreen` yang mempertahankan 1 berkas berukuran terbesar (kualitas terbaik) per grup dan mengirim sisa duplikat ke System Trash via `createTrashRequest`.
+4. **Smart Albums**: Pengelompokan dinamis (Video, Screenshot, Geotagged, Selfie) langsung dari kueri Room DB tanpa bergantung pada pustaka ExifInterface.
+
+**Alasan**:
+- Mengurangi dependensi eksternal (APK size hemat).
+- Pengolahan pHash berjalan aman di background thread via `PHashIndexingWorker`.
+- Keamanan Scoped Storage tetap terjaga (selalu menggunakan `createTrashRequest`).
+
+---
+
+## ADR-012
+## Dynamic MediaStore Sorting & 1-Click Selection State Strategy
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Pengguna membutuhkan pengurutan foto secara dinamis (Terbaru, Terlama, Nama A-Z/Z-A, Ukuran) serta mekanisme seleksi foto massal 1-klik tanpa dipaksa melakukan gesture *long-press*.
+
+**Keputusan**:
+1. **Dynamic MediaStore Query**: Menggunakan enum `SortOption` yang diterjemahkan ke dalam parameter `ContentResolver.QUERY_ARG_SORT_COLUMNS` dan `ContentResolver.QUERY_ARG_SORT_DIRECTION`.
+2. **Reactive Paging Invalidation**: ViewModel mengelola `_sortOption: StateFlow<SortOption>` dan menggunakan `flatMapLatest` untuk meng-invalidate `MediaPagingSource` secara otomatis saat kriteria sorting berubah.
+3. **1-Click Selection Entry & Select All**:
+   - Menambahkan ikon *Checklist* di TopBar untuk langsung masuk ke `isSelectionMode = true`.
+   - Menambahkan ikon *DoneAll* di `FloatingDockActionBar` untuk beralih antara memilih seluruh item yang sedang dimuat (*loaded items*) atau mengosongkan centang pilihan (*Deselect All*).
+
+**Alasan**:
+- Mencegah kebutuhan kueri ulang manual dan menjaga Paging 3 tetap reaktif.
+- Meningkatkan efisiensi navigasi dan UX saat melakukan tindakan massal (Share, Hide to Vault, Delete).
+
+**Konsekuensi**:
+- UI grid mengintegrasikan `SortBottomSheet` Material 3 untuk pemilih opsi sorting.
+
+---
+
+## ADR-013
+## Codebase Hardening, Dependency Injection Dispatchers, & Vault Security Enhancement
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Hasil audit E2E mengidentifikasi beberapa titik risiko: penggunaan `Dispatchers.IO` hardcoded tanpa qualifier Hilt, callback BiometricPrompt di Main Thread tanpa coroutine scope (race condition), bitmap pHash yang tidak di-recycle jika exception, pengindeksan foto trashed di `IndexingWorker`, callback lambda dari ViewModel ke UI, dan ketiadaan batas percobaan PIN Vault.
+
+**Keputusan**:
+1. **Hilt `@IoDispatcher` Qualifier**: Dibuat di `DispatcherModule.kt` dan diinjeksikan ke seluruh Repository & UseCases.
+2. **Vault Cache & Biometric Scope**: Menginjeksi `@VaultImageLoader` via Hilt ke `VaultViewModel` dan membungkus callback BiometricPrompt ke `viewModelScope.launch`.
+3. **Worker Safety**: Mengisi `selection = IS_TRASHED = 0` di `IndexingWorker` dan menyelimuti pHash bitmap decode dengan `try-finally` recycle di `PHashIndexingWorker`.
+4. **PIN Lockout**: Terapkan batas 5x kegagalan PIN dengan 30-detik lockout backoff di `PinEncryptionHelper`.
+5. **Decoupled UI Events**: `TrashViewModel` beralih ke `SharedFlow<TrashUiEvent>` pattern.
+
+**Alasan**:
+- Menjamin stabilitas memori, isolasi cache privat vault, keamanan PIN dari brute-force attack, dan pengujian unit yang 100% konsisten.
+
+**Konsekuensi**:
+- Seluruh UseCase dan Repository wajib menerima `@IoDispatcher CoroutineDispatcher` via konstruktor.
+
+---
+
+## ADR-014
+## Universal Media Type Filtering Strategy via Floating Dock Control
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Pengguna memerlukan opsi untuk dengan mudah memfilter tampilan berkas media (Semua Media, Foto Saja, Video Saja) secara konsisten dan cepat tanpa membingungkan navigasi.
+
+**Keputusan**:
+1. Mengubah tombol pertama pada `FloatingDock` dari tombol statis "Foto" menjadi **Media Type Filter Control** (`ALL`, `PHOTOS_ONLY`, `VIDEOS_ONLY`).
+2. Menggunakan kueri unified `MediaStore.Files.getContentUri("external")` di `MediaPagingSource` untuk mendukung pemuatan gabungan media foto (`MEDIA_TYPE_IMAGE`) dan video (`MEDIA_TYPE_VIDEO`).
+3. Menerapkan state penyaringan ini secara universal di Galeri Utama (`GalleryHomeScreen`), Detail Album (`AlbumDetailScreen`), dan Hidden Vault (`VaultScreen`).
+
+**Alasan**:
+- Antarmuka terasa mulus dan modern tanpa membutuhkan dropdown atau tab terpisah yang memakan area layar.
+- Performa Paging 3 tetap optimal karena filter diterapkan langsung pada tingkat kueri `ContentResolver` MediaStore.
+
+**Konsekuensi**:
+- Parameter filter `mediaTypeFilter` diinjeksi ke `MediaPagingSource` dan dikelola via `StateFlow` di ViewModel.
+
+---
+
+## ADR-015
+## DataStore Preferences Architecture for App Settings & Dynamic M3 Accent Colors
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Fitur Pengaturan Aplikasi (Settings) memerlukan penyimpanan preferensi pengguna (seperti tema, warna aksen Material 3, default filter startup, auto-play video, mute audio, dan lock delay Vault) yang aman, reaktif, dan terintegrasi dengan Hilt.
+
+**Keputusan**:
+1. Menggunakan **Jetpack DataStore Preferences** (`androidx.datastore:datastore-preferences`) via `ThemeRepositoryImpl` dan `SettingsPreferences`.
+2. Menyediakan 4 pilihan warna aksen Material 3 (Emerald Green, Ocean Blue, Sunset Orange, Royal Purple) yang mengubah `ColorScheme` Compose secara reaktif.
+3. Menyediakan fungsi Cache Cleaner 1-klik untuk menghapus cache memori/disk Coil tanpa mengganggu berkas media asli.
+
+**Alasan**:
+- DataStore menggantikan SharedPreferences usang dengan eksekusi Coroutines I/O yang *asynchronous* dan *type-safe*.
+- Mengubah warna aksen aplikasi secara instan tanpa memerlukan restart aplikasi.
+
+**Konsekuensi**:
+- Lapisan UI dibungkus oleh `GalleryTheme` yang mengamati `ThemeRepository.getAccentColor()` via `StateFlow`.
+
+---
+
+## ADR-016
+## Comprehensive Photo Editor Engine (Canvas Live Preview, Adjustments, Presets & Export)
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Pengguna membutuhkan pengeditan foto yang kaya fitur (potong gambar, penyesuaian kecerahan/kontras/saturasi/warmth/vignette, rotasi/flip, 10+ preset filter visual, coretan lukis brush, dan teks) serta opsi memilih format & kualitas ekspor.
+
+**Keputusan**:
+1. Membangun engine editor berbasis **Compose Canvas & `graphicsLayer`** untuk *live preview* real-time tanpa alokasi memori berlebih.
+2. Menyediakan tab kontrol: Crop, Adjustments, Rotate/Flip, Presets, Doodle/Text.
+3. Ekspor foto dilakukan via `SaveEditedPhotoUseCase` yang menghasilkan berkas baru di `MediaStore` dengan pilihan format (`JPEG`, `PNG`, `WEBP`) dan slider kompresi kualitas (`50%` s/d `100%`).
+4. Berkas hasil edit disimpan di folder asal yang sama (`RELATIVE_PATH`) dengan media yang diedit.
+
+**Alasan**:
+- Menjamin imutabilitas foto asli pengguna.
+- Performa live preview sangat responsif tanpa membebankan RAM (bebas OOM).
+
+**Konsekuensi**:
+- Proses ekspor menulis berkas secara asinkron di `Dispatchers.IO`.
+
+---
+
+## ADR-017
+## Android 15 Edge-to-Edge Compatibility & Target SDK 35 Upgrade
+
+**Status**: ✅ Diputuskan
+
+**Konteks**:
+Mulai Android 15 (API 35), aplikasi diwajibkan mendukung tampilan *edge-to-edge* secara penuh di mana status bar dan navigation bar transparan.
+
+**Keputusan**:
+1. Meng-upgrade `compileSdk = 35` dan `targetSdk = 35` pada `app/build.gradle.kts`.
+2. Memanggil `enableEdgeToEdge()` di `MainActivity.kt` sebelum `setContent {}`.
+3. Menyesuaikan insets padding pada Jetpack Compose `Scaffold` dan `Surface`.
+
+**Alasan**:
+- Memenuhi standar kepatuhan aplikasi Android rilis terbaru di Google Play Store dan Android 15.
+
+**Konsekuensi**:
+- Memastikan elemen Floating Dock dan TopBar tidak tertutup oleh insets sistem perangkat.
+
+---
+
+*Terakhir diperbarui: 29 Juli 2026 | v1.14.2 (versionCode 45)*
+

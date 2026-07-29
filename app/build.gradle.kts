@@ -22,8 +22,8 @@ android {
         applicationId = "com.gallery.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.1.0"
+        versionCode = 45
+        versionName = "1.14.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -31,14 +31,6 @@ android {
         }
     }
 
-    applicationVariants.all {
-        val appName = "OPGallery"
-        val version = versionName
-        outputs.all {
-            val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            outputImpl.outputFileName = "$appName-v$version-${buildType.name}.apk"
-        }
-    }
 
     signingConfigs {
         create("release") {
@@ -87,6 +79,15 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    applicationVariants.all {
+        outputs.all {
+            val output = this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            if (output != null) {
+                output.outputFileName = "OPGallery-v${versionName}-${buildType.name}.apk"
+            }
+        }
+    }
 }
 
 dependencies {
@@ -109,6 +110,8 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+    implementation(libs.coil.video)
+
 
     // Paging 3
     implementation(libs.androidx.paging.runtime)
@@ -118,6 +121,20 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.biometric)
+
+    // Room Database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.paging)
+    ksp(libs.androidx.room.compiler)
+
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Media3 / ExoPlayer
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.common)
 
     // Testing
     testImplementation(libs.junit)

@@ -23,16 +23,27 @@ object Routes {
     const val PERMISSION = "permission"
     const val GALLERY_HOME = "gallery_home"
     const val ALBUM_LIST = "album_list"
-    const val ALBUM_DETAIL = "album_detail/{bucketId}/{bucketName}"
-    const val VIEWER = "viewer/{initialPhotoId}"
+    const val ALBUM_DETAIL = "album_detail/{bucketId}/{bucketName}?smartType={smartType}"
+    const val VIEWER = "viewer/{initialPhotoId}?bucketId={bucketId}"
     const val EDITOR = "editor/{photoUri}"
     const val TRASH = "trash"
     const val VAULT = "vault"
     const val SETTINGS = "settings"
+    const val DUPLICATE_FINDER = "duplicate_finder"
+    const val VIDEO_PLAYER = "video_player/{videoUri}"
 
-    fun viewerRoute(photoId: Long): String = "viewer/$photoId"
+    fun viewerRoute(photoId: Long, bucketId: Long? = null): String {
+        return if (bucketId != null && bucketId != -1L) {
+            "viewer/$photoId?bucketId=$bucketId"
+        } else {
+            "viewer/$photoId?bucketId=-1"
+        }
+    }
     fun albumDetailRoute(bucketId: Long, bucketName: String): String =
         "album_detail/$bucketId/${Uri.encode(bucketName)}"
+    fun smartAlbumDetailRoute(smartType: String, displayName: String): String =
+        "album_detail/-1/${Uri.encode(displayName)}?smartType=$smartType"
+    fun videoPlayerRoute(videoUri: Uri): String = "video_player/${Uri.encode(videoUri.toString())}"
     fun editorRoute(photoUri: Uri): String = "editor/${Uri.encode(photoUri.toString())}"
 }
 
@@ -59,8 +70,12 @@ fun AppNavigation() {
 
         composable(Routes.GALLERY_HOME) {
             GalleryHomeScreen(
-                onPhotoClick = { photoId ->
-                    navController.navigate(Routes.viewerRoute(photoId))
+                onPhotoClick = { photo ->
+                    if (photo.mimeType.startsWith("video/")) {
+                        navController.navigate(Routes.videoPlayerRoute(photo.uri))
+                    } else {
+                        navController.navigate(Routes.viewerRoute(photo.id))
+                    }
                 },
                 onAlbumClick = {
                     navController.navigate(Routes.ALBUM_LIST)
@@ -79,19 +94,42 @@ fun AppNavigation() {
 
         composable(Routes.SETTINGS) {
             SettingsScreen(
+                onBackClick = { navController.popBackStack() },
+                onDuplicateClick = { navController.navigate(Routes.DUPLICATE_FINDER) }
+            )
+        }
+
+        composable(Routes.DUPLICATE_FINDER) {
+            com.gallery.app.ui.duplicate.DuplicateScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
 
         composable(Routes.TRASH) {
             TrashScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onGalleryClick = {
+                    navController.navigate(Routes.GALLERY_HOME) {
+                        popUpTo(Routes.GALLERY_HOME) { inclusive = true }
+                    }
+                },
+                onAlbumClick = { navController.navigate(Routes.ALBUM_LIST) },
+                onVaultClick = { navController.navigate(Routes.VAULT) },
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) }
             )
         }
 
         composable(Routes.VAULT) {
             VaultScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onGalleryClick = {
+                    navController.navigate(Routes.GALLERY_HOME) {
+                        popUpTo(Routes.GALLERY_HOME) { inclusive = true }
+                    }
+                },
+                onAlbumClick = { navController.navigate(Routes.ALBUM_LIST) },
+                onTrashClick = { navController.navigate(Routes.TRASH) },
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) }
             )
         }
 
@@ -100,29 +138,56 @@ fun AppNavigation() {
                 onAlbumClick = { album ->
                     navController.navigate(Routes.albumDetailRoute(album.id, album.name))
                 },
-                onBackClick = { navController.popBackStack() }
+                onSmartAlbumClick = { smartAlbum ->
+                    navController.navigate(Routes.smartAlbumDetailRoute(smartAlbum.type.name, smartAlbum.displayName))
+                },
+                onBackClick = { navController.popBackStack() },
+                onGalleryClick = {
+                    navController.navigate(Routes.GALLERY_HOME) {
+                        popUpTo(Routes.GALLERY_HOME) { inclusive = true }
+                    }
+                },
+                onTrashClick = { navController.navigate(Routes.TRASH) },
+                onVaultClick = { navController.navigate(Routes.VAULT) },
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) }
             )
         }
 
         composable(
             route = Routes.ALBUM_DETAIL,
             arguments = listOf(
-                navArgument("bucketId") { type = NavType.LongType },
-                navArgument("bucketName") { type = NavType.StringType }
+                navArgument("bucketId") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("bucketName") { type = NavType.StringType; defaultValue = "Album" },
+                navArgument("smartType") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
-        ) {
+        ) { backStackEntry ->
+            val bucketId = backStackEntry.arguments?.getLong("bucketId") ?: -1L
             AlbumDetailScreen(
-                onPhotoClick = { photoId ->
-                    navController.navigate(Routes.viewerRoute(photoId))
+                onPhotoClick = { photo ->
+                    if (photo.mimeType.startsWith("video/")) {
+                        navController.navigate(Routes.videoPlayerRoute(photo.uri))
+                    } else {
+                        navController.navigate(Routes.viewerRoute(photo.id, bucketId))
+                    }
                 },
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onGalleryClick = {
+                    navController.navigate(Routes.GALLERY_HOME) {
+                        popUpTo(Routes.GALLERY_HOME) { inclusive = true }
+                    }
+                },
+                onAlbumClick = { navController.navigate(Routes.ALBUM_LIST) },
+                onTrashClick = { navController.navigate(Routes.TRASH) },
+                onVaultClick = { navController.navigate(Routes.VAULT) },
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) }
             )
         }
 
         composable(
             route = Routes.VIEWER,
             arguments = listOf(
-                navArgument("initialPhotoId") { type = NavType.LongType }
+                navArgument("initialPhotoId") { type = NavType.LongType },
+                navArgument("bucketId") { type = NavType.LongType; defaultValue = -1L }
             )
         ) { backStackEntry ->
             val initialPhotoId = backStackEntry.arguments?.getLong("initialPhotoId") ?: 0L
@@ -145,6 +210,21 @@ fun AppNavigation() {
             val uri = Uri.parse(Uri.decode(encodedUri))
             EditorScreen(
                 photoUri = uri,
+                onBackClick = { navController.popBackStack() },
+                onSaveSuccess = { newUri ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("savedPhotoUri", newUri.toString())
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Routes.VIDEO_PLAYER,
+            arguments = listOf(
+                navArgument("videoUri") { type = NavType.StringType }
+            )
+        ) {
+            com.gallery.app.ui.video.VideoPlayerScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }

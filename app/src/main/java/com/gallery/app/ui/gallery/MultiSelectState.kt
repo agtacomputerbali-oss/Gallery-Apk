@@ -7,4 +7,5 @@ data class MultiSelectState(
     val selectedPhotos: Set<PhotoItem> = emptySet()
 ) {
     val selectedCount: Int get() = selectedPhotos.size
+    val selectedIds: Set<Long> get() = selectedPhotos.mapTo(HashSet()) { it.id }
 }

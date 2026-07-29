@@ -6,18 +6,21 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
+import com.gallery.app.di.IoDispatcher
 import com.gallery.app.domain.model.VaultItem
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.io.File
 import javax.inject.Inject
 
 class RestoreFromVaultUseCase @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
-    suspend operator fun invoke(items: List<VaultItem>): Boolean = withContext(Dispatchers.IO) {
+    suspend operator fun invoke(items: List<VaultItem>): Boolean = withContext(ioDispatcher) {
         if (items.isEmpty()) return@withContext false
 
         val vaultDir = File(context.filesDir, "vault")
@@ -30,12 +33,17 @@ class RestoreFromVaultUseCase @Inject constructor(
             if (!vaultFile.exists()) continue
 
             val filename = item.originalName.ifBlank { "restored_${System.currentTimeMillis()}.jpg" }
+            val relativeSubFolder = when {
+                !item.relativePath.isNullOrBlank() -> item.relativePath.trimEnd('/') + "/"
+                !item.folderName.isNullOrBlank() -> Environment.DIRECTORY_PICTURES + "/" + item.folderName
+                else -> Environment.DIRECTORY_PICTURES + "/GalleryApp"
+            }
 
             val contentValues = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, filename)
                 put(MediaStore.Images.Media.MIME_TYPE, item.mimeType)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/GalleryApp")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, relativeSubFolder)
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
             }
@@ -59,7 +67,7 @@ class RestoreFromVaultUseCase @Inject constructor(
                     vaultFile.delete()
                     restoredIds.add(item.id)
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e(TAG, "Failed to restore item from vault: ${item.id}", e)
                     resolver.delete(uri, null, null)
                 }
             }
@@ -77,14 +85,14 @@ class RestoreFromVaultUseCase @Inject constructor(
                 }
                 indexFile.writeText(newJsonArray.toString())
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Failed to update vault index during restore", e)
             }
         }
 
         restoredIds.isNotEmpty()
     }
 
-    suspend fun getVaultItems(): List<VaultItem> = withContext(Dispatchers.IO) {
+    suspend fun getVaultItems(): List<VaultItem> = withContext(ioDispatcher) {
         val vaultDir = File(context.filesDir, "vault")
         val indexFile = File(vaultDir, "vault_index.json")
 
@@ -95,13 +103,18 @@ class RestoreFromVaultUseCase @Inject constructor(
             val list = mutableListOf<VaultItem>()
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
+                val folderName = obj.optString("folderName").takeIf { !it.isNullOrBlank() && it != "null" }
+                val relativePath = obj.optString("relativePath").takeIf { !it.isNullOrBlank() && it != "null" }
+
                 list.add(
                     VaultItem(
                         id = obj.getString("id"),
                         originalName = obj.getString("originalName"),
                         mimeType = obj.getString("mimeType"),
                         vaultFilePath = obj.getString("vaultFilePath"),
-                        dateAdded = obj.getLong("dateAdded")
+                        dateAdded = obj.getLong("dateAdded"),
+                        folderName = folderName,
+                        relativePath = relativePath
                     )
                 )
             }
@@ -111,7 +124,7 @@ class RestoreFromVaultUseCase @Inject constructor(
         }
     }
 
-    suspend fun deleteFromVaultPermanently(items: List<VaultItem>): Boolean = withContext(Dispatchers.IO) {
+    suspend fun deleteFromVaultPermanently(items: List<VaultItem>): Boolean = withContext(ioDispatcher) {
         val vaultDir = File(context.filesDir, "vault")
         val indexFile = File(vaultDir, "vault_index.json")
 
@@ -137,10 +150,14 @@ class RestoreFromVaultUseCase @Inject constructor(
                 }
                 indexFile.writeText(newJsonArray.toString())
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Failed to update vault index during permanent deletion", e)
             }
         }
 
         true
+    }
+
+    companion object {
+        private const val TAG = "RestoreFromVaultUseCase"
     }
 }

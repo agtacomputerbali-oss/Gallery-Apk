@@ -4,7 +4,6 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -33,11 +33,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -51,16 +51,29 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.gallery.app.domain.model.PhotoItem
+import com.gallery.app.ui.components.DockDestination
+import com.gallery.app.ui.components.FloatingDockContainer
 import com.gallery.app.ui.components.PhotoThumbnail
+import com.gallery.app.ui.gallery.rememberFloatingDockVisibility
+
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrashScreen(
     onBackClick: () -> Unit,
+    onGalleryClick: () -> Unit = {},
+    onAlbumClick: () -> Unit = {},
+    onVaultClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     viewModel: TrashViewModel = hiltViewModel()
 ) {
     val lazyPagingItems: LazyPagingItems<PhotoItem> = viewModel.trashedPhotosState.collectAsLazyPagingItems()
     val multiSelectState by viewModel.multiSelectState.collectAsStateWithLifecycle()
+
+    val gridState = rememberLazyGridState()
+    val isDockVisible by rememberFloatingDockVisibility(gridState)
 
     val intentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -72,8 +85,28 @@ fun TrashScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is TrashUiEvent.LaunchRestoreConfirmation -> {
+                    intentLauncher.launch(
+                        IntentSenderRequest.Builder(event.intentSender).build()
+                    )
+                }
+                is TrashUiEvent.LaunchDeleteConfirmation -> {
+                    intentLauncher.launch(
+                        IntentSenderRequest.Builder(event.intentSender).build()
+                    )
+                }
+                is TrashUiEvent.RefreshMedia -> {
+                    lazyPagingItems.refresh()
+                }
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
             if (multiSelectState.isSelectionMode) {
                 TopAppBar(
                     title = { Text(text = "${multiSelectState.selectedCount} Dipilih") },
@@ -87,18 +120,7 @@ fun TrashScreen(
                     },
                     actions = {
                         IconButton(
-                            onClick = {
-                                viewModel.restoreSelectedPhotos(
-                                    onIntentSenderReady = { intentSender ->
-                                        intentLauncher.launch(
-                                            IntentSenderRequest.Builder(intentSender).build()
-                                        )
-                                    },
-                                    onRestoreSuccess = {
-                                        lazyPagingItems.refresh()
-                                    }
-                                )
-                            },
+                            onClick = { viewModel.restoreSelectedPhotos() },
                             enabled = multiSelectState.selectedCount > 0
                         ) {
                             Icon(
@@ -108,18 +130,7 @@ fun TrashScreen(
                         }
 
                         IconButton(
-                            onClick = {
-                                viewModel.permanentDeleteSelectedPhotos(
-                                    onIntentSenderReady = { intentSender ->
-                                        intentLauncher.launch(
-                                            IntentSenderRequest.Builder(intentSender).build()
-                                        )
-                                    },
-                                    onDeleteSuccess = {
-                                        lazyPagingItems.refresh()
-                                    }
-                                )
-                            },
+                            onClick = { viewModel.permanentDeleteSelectedPhotos() },
                             enabled = multiSelectState.selectedCount > 0
                         ) {
                             Icon(
@@ -143,13 +154,7 @@ fun TrashScreen(
                     }
                 )
             }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+
             // Info Banner
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant,
@@ -177,7 +182,9 @@ fun TrashScreen(
             }
 
             Box(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
             ) {
                 val refreshState = lazyPagingItems.loadState.refresh
 
@@ -246,8 +253,9 @@ fun TrashScreen(
 
                     else -> {
                         LazyVerticalGrid(
+                            state = gridState,
                             columns = GridCells.Fixed(3),
-                            contentPadding = PaddingValues(2.dp),
+                            contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 100.dp),
                             horizontalArrangement = Arrangement.spacedBy(2.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                             modifier = Modifier.fillMaxSize()
@@ -258,8 +266,8 @@ fun TrashScreen(
                             ) { index ->
                                 val photo = lazyPagingItems[index]
                                 if (photo != null) {
-                                    val isSelected = remember(multiSelectState.selectedPhotos, photo.id) {
-                                        multiSelectState.selectedPhotos.contains(photo)
+                                    val isSelected by remember(multiSelectState.selectedPhotos, photo.id) {
+                                        derivedStateOf { multiSelectState.selectedPhotos.contains(photo) }
                                     }
                                     PhotoThumbnail(
                                         photo = photo,
@@ -284,7 +292,7 @@ fun TrashScreen(
                             }
 
                             if (lazyPagingItems.loadState.append is LoadState.Loading) {
-                                item(span = { GridItemSpan(3) }) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -302,5 +310,20 @@ fun TrashScreen(
                 }
             }
         }
+
+        FloatingDockContainer(
+            currentDestination = DockDestination.TRASH,
+            isVisible = isDockVisible,
+            onNavigate = { destination ->
+                when (destination) {
+                    DockDestination.GALLERY -> onGalleryClick()
+                    DockDestination.ALBUMS -> onAlbumClick()
+                    DockDestination.TRASH -> {}
+                    DockDestination.VAULT -> onVaultClick()
+                    DockDestination.SETTINGS -> onSettingsClick()
+                }
+            },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }

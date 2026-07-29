@@ -58,14 +58,15 @@ Seluruh warna didefinisikan menggunakan **Material 3 Color Scheme** (`Color.kt` 
 
 ---
 
-## 🎨 UI System Custom Image Editor (`EditorScreen`)
+## 🎨 UI System Professional Image Editor (`EditorScreen`)
 
-1. **Canvas Crop Overlay**:
-   - Menampilkan kerangka garis potong (*crop handles*) di atas foto.
-   - Mendukung penyesuaian rasio instan (Bebas, 1:1, 4:3) via tombol tab horizontal.
-2. **Carousel Filter Preview**:
-   - Baris kompresi horizontal di bagian bawah editor yang menampilkan *mini-thumbnail* foto dengan efek `ColorMatrix` real-time (Original, Grayscale, Sepia, Warm, Cool, Contrast).
-3. **Action Footer**: Tombol "Batal" (kiri) dan "Simpan Sebagai Baru" (kanan - Primary CTA).
+1. **Canvas Live Preview & Crop Overlay**:
+   - Menampilkan kerangka garis potong (*crop handles*) di atas canvas foto dengan grid interaktif saat tab Crop aktif.
+   - Mendukung penyesuaian rasio instan (Bebas, 1:1, 4:3, 16:9) via tombol selector.
+2. **Tab Navigation Bar & Control Sliders**:
+   - 5 Tab Utama: 📐 Crop & Ratio, 🎛️ Penyetelan (Brightness, Contrast, Saturation, Warmth, Vignette), 🔄 Rotasi/Flip (90° CCW/CW, Flip H/V), 🎨 Preset Filter (10+ thumbnail horizontal: Original, Vivid, Noir, Cyberpunk, dll), ✏️ Doodle & Teks (Color Picker, Stroke Width slider, Undo, Text input).
+3. **Export Bottom Sheet**:
+   - Selector format file (`JPEG`, `PNG`, `WEBP`) dan slider kompresi kualitas (`50%` s/d `100%`) dengan tombol CTA "Simpan Sebagai Berkas Baru".
 
 ---
 
@@ -78,6 +79,60 @@ Seluruh warna didefinisikan menggunakan **Material 3 Color Scheme** (`Color.kt` 
 3. **Vault Grid Isolation**:
    - Tampilan grid foto dalam vault dilengkapi badge ikon gembok kecil di setiap thumbnail.
    - Tombol utama "Restore ke Galeri" dan "Hapus Permanen" di BottomBar.
+
+---
+
+## ⚓ UI System Floating Dock Navigation (`FloatingDock.kt`)
+
+1. **Capsule Glassmorphism Layout**:
+   - Komponen melayang berbentuk pill/kapsul di bagian bawah tengah layar (`NavigationBar` melayang).
+   - Menggunakan warna Surface Variant dengan transparansi 85% dan border halus `surfaceTint`.
+2. **Media Type Filter Control**:
+   - Tombol navigasi pertama bertransformasi secara melingkar (`ALL` ➔ `PHOTOS` ➔ `VIDEOS` ➔ `ALL`) dengan ikon semantik (`PermMedia`, `Image`, `Videocam`) dan label dinamis (`Semua`, `Foto`, `Video`).
+3. **Auto-Hide & Horizontal Scroll Action Mode**:
+   - Otomatis menyembunyikan posisi pill saat pengguna melakukan gulir (*scroll*) ke bawah pada grid.
+   - Transisi animasi dari mode navigasi utama menjadi Action Bar interaktif dengan `Modifier.horizontalScroll` saat mode multi-select aktif.
+
+---
+
+## 🔍 UI System Duplicate Photo Finder (`DuplicateScreen.kt`)
+
+1. **Grouping Card Container**:
+   - Setiap kelompok foto mirip disajikan dalam `Card` terpisah dengan header jumlah item dan estimasi ruang penyimpanan yang dapat dihemat.
+2. **Best Quality Badge**:
+   - Foto dengan ukuran berkas terbesar secara otomatis mendapatkan penanda (*badge*) visual *"Kualitas Terbaik (Pertahankan)"*.
+3. **One-tap Bulk Cleanup Floating Bar**:
+   - Tombol utama *"✨ Bersihkan Semua"* yang menonjol di bagian bawah untuk menghapus seluruh duplikat secara massal tanpa memilih manual.
+
+---
+
+## 🎬 UI System Internal Video Player (`VideoPlayerScreen.kt`)
+
+1. **Embedded Player Overlay**:
+   - Kontrol pemutaran video (`Play/Pause`, `SeekBar`, `Time Duration`) muncul/sembunyi saat layar di-tap.
+2. **Auto Lifecycle Binding**:
+   - Pemutaran video berhenti dan instance ExoPlayer dilepas secara otomatis saat pengguna menekan tombol kembali.
+
+---
+
+## ⚙️ UI System Settings & Theme Customization (`SettingsScreen`)
+
+1. **Material 3 Accent Color Selector**:
+   - Grid 4 pilihan warna aksen (Emerald Green, Ocean Blue, Sunset Orange, Royal Purple) dengan indikator centang pada warna aktif.
+2. **Preferences Section Cards**:
+   - Kartu preferensi terkelompok: Tampilan & Tema, Filter & Media (Default Startup, Auto-play Video, Mute Audio), Keamanan & Vault (Lock Delay & Ubah PIN), serta Manajemen Storage & Cache.
+3. **Storage & Cache Cleaner Action**:
+   - Indikator ukuran disk usage (Room DB, Coil cache, Vault storage) dan Button `primaryContainer` *"Bersihkan Cache Thumbnail"* 1-klik.
+
+---
+
+## 📊 UI System Sort By & 1-Click Bulk Select (`SortBottomSheet.kt`)
+
+1. **Sort BottomSheet Dialog**:
+   - ModalBottomSheet Material 3 yang menyajikan opsi pengurutan (Terbaru, Terlama, Nama A-Z, Nama Z-A, Ukuran Terbesar, Ukuran Terkecil, Bulan & Tahun) dengan indikator `RadioButton`.
+2. **1-Click Selection & Action Bar**:
+   - Ikon TopBar `Checklist` memicu mode seleksi tanpa gesture long-press.
+   - Ikon `DoneAll` pada `FloatingDockActionBar` beralih instan antara *Select All* (pilih seluruh loaded items) dan *Deselect All*.
 
 ---
 
@@ -94,4 +149,4 @@ Seluruh warna didefinisikan menggunakan **Material 3 Color Scheme** (`Color.kt` 
 ---
 
 *Single Source of Truth untuk: Gallery App Android — Jetpack Compose + Material 3*
-*Terakhir diperbarui: 28 Juli 2026*
+*Terakhir diperbarui: 29 Juli 2026 | v1.14.2 (versionCode 45)*

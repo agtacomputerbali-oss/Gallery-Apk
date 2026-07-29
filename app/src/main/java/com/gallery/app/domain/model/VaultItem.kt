@@ -5,5 +5,7 @@ data class VaultItem(
     val originalName: String,
     val mimeType: String,
     val vaultFilePath: String,
-    val dateAdded: Long
+    val dateAdded: Long,
+    val folderName: String? = null,
+    val relativePath: String? = null
 )

@@ -56,6 +56,12 @@ import com.gallery.app.domain.model.PhotoItem
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +77,29 @@ fun ViewerScreen(
     var isZoomed by remember { mutableStateOf(false) }
     var hasInitialScrolled by rememberSaveable { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is ViewerUiEvent.RefreshMedia -> {
+                    lazyPagingItems.refresh()
+                }
+            }
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                lazyPagingItems.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     val deleteLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
@@ -85,10 +114,13 @@ fun ViewerScreen(
         pageCount = { totalCount }
     )
 
-    LaunchedEffect(lazyPagingItems.itemCount, initialPhotoId) {
-        if (lazyPagingItems.itemCount > 0 && !hasInitialScrolled) {
+    val activePhotoId by viewModel.activePhotoId.collectAsStateWithLifecycle()
+    val targetPhotoId = activePhotoId ?: initialPhotoId
+
+    LaunchedEffect(lazyPagingItems.itemCount, targetPhotoId) {
+        if (lazyPagingItems.itemCount > 0) {
             val targetIndex = (0 until lazyPagingItems.itemCount).firstOrNull { index ->
-                lazyPagingItems.peek(index)?.id == initialPhotoId
+                lazyPagingItems.peek(index)?.id == targetPhotoId
             }
             if (targetIndex != null) {
                 pagerState.scrollToPage(targetIndex)

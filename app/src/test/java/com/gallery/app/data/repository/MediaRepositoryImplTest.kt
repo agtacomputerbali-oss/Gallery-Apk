@@ -2,6 +2,7 @@ package com.gallery.app.data.repository
 
 import android.content.Context
 import com.gallery.app.domain.model.PhotoItem
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNotNull
@@ -17,7 +18,7 @@ class MediaRepositoryImplTest {
     @Before
     fun setUp() {
         context = mock(Context::class.java)
-        repository = MediaRepositoryImpl(context)
+        repository = MediaRepositoryImpl(context, Dispatchers.Unconfined)
     }
 
     @Test

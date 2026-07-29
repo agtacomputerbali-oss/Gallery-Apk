@@ -32,13 +32,14 @@ fun PermissionScreen(
 ) {
     val context = LocalContext.current
     val permissionState by viewModel.permissionState.collectAsStateWithLifecycle()
-    val requiredPermission = viewModel.getRequiredPermission()
+    val requiredPermissions = viewModel.getRequiredPermissions()
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        val isAnyGranted = result.values.any { it }
         viewModel.onPermissionResult(
-            isGranted = isGranted,
+            isGranted = isAnyGranted,
             shouldShowRationale = false
         )
     }
@@ -78,7 +79,7 @@ fun PermissionScreen(
 
         Button(
             onClick = {
-                permissionLauncher.launch(requiredPermission)
+                permissionLauncher.launch(requiredPermissions)
             }
         ) {
             Text(text = "Izinkan Akses")

@@ -18,29 +18,31 @@ class PermissionViewModel @Inject constructor() : ViewModel() {
     private val _permissionState = MutableStateFlow<PermissionState>(PermissionState.Idle)
     val permissionState: StateFlow<PermissionState> = _permissionState.asStateFlow()
 
-    fun getRequiredPermission(): String {
+    fun getRequiredPermissions(): Array<String> {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
+            val list = mutableListOf(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                list.add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+            }
+            list.toTypedArray()
         } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
     }
 
     fun checkPermissionStatus(context: Context) {
         val isGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_MEDIA_IMAGES
-            ) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
-            ) == PackageManager.PERMISSION_GRANTED
+            val hasImages = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+            val hasVideo = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
+            val hasSelected = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
+            (hasImages && hasVideo) || hasSelected
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_MEDIA_IMAGES
-            ) == PackageManager.PERMISSION_GRANTED
+            val hasImages = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+            val hasVideo = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
+            hasImages || hasVideo
         } else {
             ContextCompat.checkSelfPermission(
                 context,
@@ -55,7 +57,7 @@ class PermissionViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun onPermissionResult(isGranted: Boolean, shouldShowRationale: Boolean) {
+    fun onPermissionResult(isGranted: Boolean, shouldShowRationale: Boolean = false) {
         if (isGranted) {
             _permissionState.value = PermissionState.Granted
         } else {
